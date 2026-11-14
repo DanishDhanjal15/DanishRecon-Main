@@ -260,9 +260,52 @@ def cmd_sniff(argv=None):
     return _run_analysis(eng, args, "Traffic analysis")
 
 
+def cmd_setup(argv=None):
+    from danishrecon import tools
+    p = argparse.ArgumentParser(
+        prog="danishrecon setup",
+        description=f"Install the external tools DanishRecon drives into {tools.TOOLS_DIR} "
+                    "(official sources only). Every scan, from any folder, finds them there.")
+    p.add_argument("tool", nargs="*",
+                   help="what to install: " + ", ".join(sorted(tools.INSTALLERS)) +
+                        f" (default: {' '.join(tools.DEFAULT_SET)}; openvas only when named)")
+    p.add_argument("--list", action="store_true", help="only show what is installed and where")
+    args = p.parse_args(argv)
+
+    def show():
+        print()
+        print(f"Tools folder: {tools.TOOLS_DIR}")
+        for name, where in tools.status().items():
+            print(f"  {'OK ' if where else '-- '} {name:10s} {where or 'not installed'}")
+        print()
+
+    if args.list:
+        show()
+        return 0
+    wanted = args.tool or list(tools.DEFAULT_SET)
+    unknown = [t for t in wanted if t not in tools.INSTALLERS]
+    if unknown:
+        print("Unknown tool(s): " + ", ".join(unknown), file=sys.stderr)
+        return 2
+    failed = []
+    for name in wanted:
+        print(f"[setup] {name}")
+        try:
+            tools.INSTALLERS[name](print)
+        except Exception as e:
+            failed.append(name)
+            print(f"  FAILED: {e}")
+    show()
+    if failed:
+        print("Not installed: " + ", ".join(failed))
+    return 1 if failed else 0
+
+
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     sub = argv[0] if argv else ""
+    if sub == "setup":
+        return cmd_setup(argv[1:])
     if sub == "malware":
         return cmd_malware(argv[1:])
     if sub == "sniff":

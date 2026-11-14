@@ -28,7 +28,9 @@ _tool_cache: Dict[str, Optional[str]] = {}
 def _candidates(name: str) -> List[str]:
     exe = name + (".exe" if os.name == "nt" else "")
     gopath = os.environ.get("GOPATH") or os.path.join(os.path.expanduser("~"), "go")
-    paths = [os.path.join(gopath, "bin", exe),
+    from danishrecon.tools import bin_path       # per-user tools folder (danishrecon setup)
+    paths = [str(bin_path(name)),
+             os.path.join(gopath, "bin", exe),
              os.path.join(os.path.expanduser("~"), "go", "bin", exe),
              "/usr/local/bin/" + name, "/usr/bin/" + name, "/root/go/bin/" + name]
     which = shutil.which(name)

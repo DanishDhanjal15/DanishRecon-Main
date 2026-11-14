@@ -214,25 +214,10 @@ TWILIO_WHATSAPP_TO_ENV = "DANISHRECON_TWILIO_WHATSAPP_TO"
 
 # Nikto configuration - using local nikto installation
 # Search for nikto.pl in multiple locations (nikto_official first, then fallbacks)
-_nikto_candidates = [
-    # explicit override, then a checkout next to where the tool is run from
-    os.environ.get("NIKTO_PATH", ""),
-    os.path.join(os.getcwd(), "nikto_official", "program", "nikto.pl"),
-    os.path.join(os.getcwd(), "nikto", "program", "nikto.pl"),
-    "/opt/nikto/program/nikto.pl",
-    # PRIMARY: nikto_official has the confirmed working nikto.pl
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "nikto_official", "program", "nikto.pl"),
-    # FALLBACK: original nikto folder (may be quarantined by Defender)
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "nikto", "program", "nikto.pl"),
-    # FALLBACK: nikto-main folder
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "nikto-main", "program", "nikto.pl"),
-    # FALLBACK: nikto on the system PATH (Linux/macOS package installs, e.g. /usr/bin/nikto)
-    shutil.which("nikto.pl") or "",
-    shutil.which("nikto") or "",
-]
-# FIXED: Only use NIKTO_PATH if it actually exists; otherwise set to None for graceful degradation
-_found_nikto = next((p for p in _nikto_candidates if os.path.exists(p)), None)
-NIKTO_PATH = _found_nikto if _found_nikto else None
+# Nikto: the per-user tools folder (danishrecon setup nikto), NIKTO_PATH, a checkout in the
+# working directory, or a system install. See danishrecon/tools.py.
+from danishrecon.tools import find_nikto as _find_nikto_tool, bin_path as _tool_bin
+NIKTO_PATH = _find_nikto_tool()
 NIKTO_AVAILABLE = NIKTO_PATH is not None
 
 # Perl executable - try PATH first, then use absolute Strawberry Perl path as fallback
@@ -989,13 +974,36 @@ class CmdResult(str):
 #
 #  ADVANCED SCAN ENGINE
 #
+def openvas_unavailable_reason() -> str:
+    """Explain precisely why the OpenVAS stage cannot run, with the fix."""
+    try:
+        from danishrecon import openvas_scanner as _ov
+        gvm_ok = bool(getattr(_ov, "GVM_AVAILABLE", False))
+        host, port = getattr(_ov, "GVM_HOST", "127.0.0.1"), getattr(_ov, "GVM_PORT", 9390)
+    except Exception:
+        gvm_ok, host, port = False, "127.0.0.1", 9390
+    if not gvm_ok:
+        return 'the GMP client is not installed (pip install "danishrecon[openvas]")'
+    try:
+        with socket.create_connection((host, port), timeout=2):
+            return f"{host}:{port} is open but GMP login failed (check GVM_USER / GVM_PASSWORD in .env)"
+    except OSError:
+        pass
+    from danishrecon.tools import docker_running
+    if not shutil.which("docker"):
+        return "Docker is not installed (OpenVAS runs as a container - install Docker Desktop)"
+    if not docker_running():
+        return "Docker is not running (start Docker Desktop, then: danishrecon setup openvas)"
+    return f"no OpenVAS container is listening on {host}:{port} (start one: danishrecon setup openvas)"
+
+
 def find_rustscan():
     """Locate the RustScan binary (optional fast port discovery). Returns a path or None.
 
     RustScan is NOT required: when absent, the engine uses nmap for port discovery as before.
     """
     exe = "rustscan" + (".exe" if os.name == "nt" else "")
-    cand = [shutil.which("rustscan"),
+    cand = [str(_tool_bin("rustscan")), shutil.which("rustscan"),
             os.path.join(os.path.expanduser("~"), ".cargo", "bin", exe),
             r"C:\Program Files\RustScan\rustscan.exe" if os.name == "nt" else "/usr/local/bin/rustscan",
             "/usr/bin/rustscan"]
@@ -1992,7 +2000,7 @@ class ScanEngine:
             return findings
 
         if not NIKTO_AVAILABLE:
-            self.log("  Nikto script not found - web scanning skipped", "warn")
+            self.log("  Nikto not installed - Nikto stage skipped (install it: danishrecon setup nikto)", "warn")
             self.prog("vuln", 35)
             return findings
 
@@ -2166,38 +2174,24 @@ class ScanEngine:
         Runs after Nikto to perform deep vulnerability scanning on discovered services
         Falls back to demo mode if daemon not available (Windows compatibility)
         """
-        # CRITICAL DEBUG: Print to stderr for guaranteed visibility
-        import sys as _sys_debug
-        _sys_debug.stderr.write("\n[!!!OPENVAS!!!] stage_openvas_scan() ENTRY POINT REACHED\n")
-        _sys_debug.stderr.flush()
         
         self.current_stage = "openvas"
         self.log(" STAGE 6A: VULNERABILITY SCANNING (OpenVAS) ", "stage")
-        _sys_debug.stderr.write(f"[!!!OPENVAS!!!] OPENVAS_AVAILABLE={OPENVAS_AVAILABLE}, services_count={len(services)}\n")
-        _sys_debug.stderr.flush()
         
         self.stage_signal.emit("OpenVAS Scan")
         self.prog("vuln", 40)
         findings = []
         
         if not OPENVAS_AVAILABLE:
-            _sys_debug.stderr.write("[!!!OPENVAS!!!] OPENVAS_AVAILABLE is False, returning early\n")
-            _sys_debug.stderr.flush()
-            self.log("  OpenVAS module not available - install: pip install python-openvas", "warn")
+            self.log(f"  OpenVAS not available - stage skipped: {openvas_unavailable_reason()}", "warn")
             self.prog("vuln", 45)
             return findings
         
-        _sys_debug.stderr.write("[!!!OPENVAS!!!] Proceeding with OpenVASScanner initialization\n")
-        _sys_debug.stderr.flush()
         
         # Initialize OpenVAS scanner
         try:
             scanner = OpenVASScanner(timeout=1800)  # 30 minute timeout
-            _sys_debug.stderr.write("[!!!OPENVAS!!!] OpenVASScanner initialized successfully\n")
-            _sys_debug.stderr.flush()
         except Exception as e:
-            _sys_debug.stderr.write(f"[!!!OPENVAS!!!] OpenVASScanner init failed: {str(e)}\n")
-            _sys_debug.stderr.flush()
             self.log(f"  OpenVAS initialization failed: {str(e)}", "error")
             self.prog("vuln", 45)
             return findings
@@ -2211,13 +2205,9 @@ class ScanEngine:
                 unique_hosts.append(host)
                 seen_hosts.add(host)
         
-        _sys_debug.stderr.write(f"[!!!OPENVAS!!!] Found {len(unique_hosts)} unique hosts: {unique_hosts}\n")
-        _sys_debug.stderr.flush()
         
         if not unique_hosts:
             # Fall back to the original scan target (same as Nuclei does)
-            _sys_debug.stderr.write("[!!!OPENVAS!!!] No hosts from services, falling back to self.target\n")
-            _sys_debug.stderr.flush()
             self.log("  No services found – falling back to original target for OpenVAS", "info")
             unique_hosts = [self.target]
         
@@ -2228,8 +2218,7 @@ class ScanEngine:
         allow_demo = self.opts.get("demo_mode", False)
         use_demo_mode = (not scanner_available) and allow_demo
         if not scanner_available and not allow_demo:
-            self.log("  OpenVAS/GVM daemon not available — skipping OpenVAS stage "
-                     "(enable demo_mode in options for sample output)", "warn")
+            self.log(f"  OpenVAS not available - stage skipped: {openvas_unavailable_reason()}", "warn")
             self.prog("vuln", 45)
             return findings
         
@@ -3270,7 +3259,7 @@ class ScanEngine:
         self.prog("vuln", 40)
         exploits = []
         if not EXPLOIT_SEARCH_AVAILABLE or not exploit_search.available():
-            self.log("  Exploit-DB index (files_exploits.csv) not found - lookup skipped", "warn")
+            self.log("  Exploit-DB index not installed - lookup skipped (install it: danishrecon setup exploitdb)", "warn")
             self.prog("vuln", 60)
             return exploits
 

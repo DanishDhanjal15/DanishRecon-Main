@@ -1,5 +1,20 @@
 # DanishRecon - Changes Log & Roadmap
 
+## v0.7.1
+
+- **`danishrecon setup`**: installs Nikto, the Exploit-DB index, nuclei / katana / httpx /
+  subfinder and rustscan from their official releases into `~/.danishrecon/tools`
+  (`DANISHRECON_TOOLS` to override); `setup openvas` writes a compose file and starts the
+  OpenVAS container when Docker is running; `setup --list` shows what is where.
+- Every tool lookup (scan engine, preflight, GUI) searches that folder first, so a pip install
+  run from any directory finds the tools. Previously Nikto and the Exploit-DB index were only
+  found in the directory the scan was started from ("Nikto script not found").
+- OpenVAS: the stage now says exactly why it is skipped (GMP client missing / Docker not
+  installed / Docker not running / no container / login failed) and how to fix it; the
+  leftover `[!!!OPENVAS!!!]` debug output is gone.
+- GUI: optional tools that are not installed (e.g. rustscan) are listed once, quietly,
+  instead of as an orange warning; the welcome text shows the real command names.
+
 ## v0.7.0 packaging
 
 - The project is now a pip-installable package (`danishrecon`, `src/` layout) with entry

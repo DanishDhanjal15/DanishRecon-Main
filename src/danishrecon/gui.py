@@ -1643,7 +1643,10 @@ class DanishReconMain(QMainWindow):
         self._preflight = report
         self._apply_preflight(report)
         try:
-            if report.get("status") != "ready":
+            # Pop up only when scanning is impossible (a CRITICAL tool such as nmap is
+            # missing). Recommended/optional gaps are already listed in the console, and a
+            # modal dialog on every launch for them is just noise.
+            if report.get("status") == "not_ready":
                 PreflightDialog(report, self).exec_()
         except Exception as _dlg_err:
             print(f"[preflight] dialog skipped: {_dlg_err}")
@@ -1660,17 +1663,30 @@ class DanishReconMain(QMainWindow):
             except Exception:
                 print(msg)
 
-        _log(f"System check: {status.upper()} "
-             f"({s['ok']}/{s['total']} ready, {s['missing_critical']} critical missing)", "stage")
-        for c in missing:
-            _log(f"  missing [{c['severity']}] {c['name']} - {c['hint']}", "warn")
+        needed = [c for c in missing if c["severity"] != "optional"]
+        optional = [c for c in missing if c["severity"] == "optional"]
+        if not needed:
+            _log("System check: ready - all required and recommended tools are installed", "good")
+        else:
+            _log(f"System check: {len(needed)} tool(s) missing", "stage")
+            for c in needed:
+                _log(f"  missing [{c['severity']}] {c['name']} - {c['hint']}", "warn")
+        # Optional extras are not problems; mention them once, quietly.
+        opt_tools = [c["name"] for c in optional if c.get("category") == "External tool"]
+        opt_other = [c["name"] for c in optional if c.get("category") != "External tool"]
+        if opt_tools:
+            _log("  Optional tools not installed: " + ", ".join(opt_tools) +
+                 "  (add them any time: danishrecon setup)", "muted")
+        if opt_other:
+            _log("  Optional, not set: " + ", ".join(opt_other) +
+                 "  (only needed for the features that use them)", "muted")
 
         if s["missing_critical"] > 0:
             self.start_btn.setEnabled(False)
             self.start_btn.setText("  START SCAN (missing tools)")
             self.start_btn.setToolTip(
                 "Cannot scan: install the CRITICAL items shown in the console, then restart. "
-                "Run `python preflight.py` for details.")
+                "Run `danishrecon-preflight` for details.")
 
     def _verify_tools(self):
         """Verify and log tool paths at startup for diagnostics"""
@@ -2440,7 +2456,7 @@ class DanishReconMain(QMainWindow):
         <div style="color:{t['TEXT2']};margin:6px 0 6px 12px;line-height:1.8;">
            Enter a target on the left, pick a profile, press START SCAN (Ctrl+N).<br>
            Findings appear in the tabs on the right while the scan runs.<br>
-           Malware and traffic analysis run from the CLI: <span style="color:{t['CYAN']};">cli.py malware</span> / <span style="color:{t['CYAN']};">cli.py sniff</span>
+           Malware and traffic analysis run from the CLI: <span style="color:{t['CYAN']};">danishrecon malware</span> / <span style="color:{t['CYAN']};">danishrecon sniff</span>
         </div>
         <br>
         <div style="color:{t['ORANGE']};">Authorized use only: scan systems you own or have written permission to test.</div>
@@ -2813,7 +2829,7 @@ class DanishReconMain(QMainWindow):
             QMessageBox.warning(
                 self, "Missing required tools",
                 "Cannot start a scan. Missing: " + ", ".join(missing) +
-                "\n\nRun `python preflight.py` for install instructions, then restart.")
+                "\n\nRun `danishrecon-preflight` for install instructions, then restart.")
             return
         target = self.target_input.text().strip()
         if not target:

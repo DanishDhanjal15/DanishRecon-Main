@@ -12,8 +12,8 @@ even on a machine where none of the project's dependencies are installed yet.
 That is the whole point — it is the first thing a new user should be able to run.
 
 Usage:
-    python preflight.py            # human-readable report in the terminal
-    python preflight.py --json     # machine-readable JSON (for the GUI/CI)
+    danishrecon-preflight          # human-readable report in the terminal
+    danishrecon-preflight --json   # machine-readable JSON (for the GUI/CI)
 
 Programmatic:
     from danishrecon.preflight import run_preflight
@@ -128,12 +128,8 @@ def _find_perl():
 
 
 def _find_nikto():
-    # bundled nikto.pl candidates (relative to project), then PATH
-    return _first_existing([
-        os.path.join(_PARENT, "nikto_official", "program", "nikto.pl"),
-        os.path.join(_PARENT, "nikto", "program", "nikto.pl"),
-        os.path.join(_PARENT, "nikto-main", "program", "nikto.pl"),
-    ]) or _which("nikto.pl", "nikto")
+    from danishrecon.tools import find_nikto
+    return find_nikto()
 
 
 def _find_nuclei():
@@ -209,7 +205,7 @@ def _check_external_tools():
         name="nikto", category="External tool", severity=RECOMMENDED,
         ok=bool(nikto), path=nikto, version=None,
         purpose="Web server vulnerability scanning (Stage 6)",
-        hint=_hint("Bundled in nikto_official/ — or: git clone https://github.com/sullo/nikto",
+        hint=_hint("danishrecon setup nikto   (needs Strawberry Perl: https://strawberryperl.com)",
                    "sudo apt install nikto   # or clone github.com/sullo/nikto",
                    "brew install nikto"),
     ))
@@ -220,8 +216,7 @@ def _check_external_tools():
         ok=bool(nuclei), path=nuclei,
         version=_try_version([nuclei, "-version"]) if nuclei else None,
         purpose="Template-based vulnerability scanning (optional stage)",
-        hint="go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest"
-             "   (or download a release binary and add to PATH)",
+        hint="danishrecon setup nuclei",
     ))
 
     # katana (crawler) + httpx (fingerprinting): without them the DAST stage has no
@@ -235,13 +230,13 @@ def _check_external_tools():
         name="katana", category="External tool", severity=RECOMMENDED,
         ok=bool(_katana), path=_katana, version=None,
         purpose="Crawls the web app to find URLs/parameters for injection testing (DAST)",
-        hint="go install github.com/projectdiscovery/katana/cmd/katana@latest",
+        hint="danishrecon setup katana",
     ))
     checks.append(dict(
         name="httpx", category="External tool", severity=OPTIONAL,
         ok=bool(_httpx), path=_httpx, version=None,
         purpose="Web service probing and technology fingerprinting",
-        hint="go install github.com/projectdiscovery/httpx/cmd/httpx@latest"
+        hint="danishrecon setup httpx"
              "   (the ProjectDiscovery tool, not the Python 'httpx' package)",
     ))
 
@@ -266,15 +261,14 @@ def _check_external_tools():
             hint=f"pip install {'yara-python' if _mod == 'yara' else _mod}",
         ))
 
-    _rustscan = _which("rustscan")
+    from danishrecon.scan_core import find_rustscan as _frs
+    _rustscan = _frs()
     checks.append(dict(
         name="rustscan", category="External tool", severity=OPTIONAL,
         ok=bool(_rustscan), path=_rustscan,
         version=_try_version([_rustscan, "--version"]) if _rustscan else None,
         purpose="Fast all-ports discovery for the Full profile (feeds nmap -sV; nmap used if absent)",
-        hint=_hint("cargo install rustscan   (or a release binary from github.com/bee-san/RustScan)",
-                   "cargo install rustscan   # or: sudo apt install rustscan",
-                   "brew install rustscan"),
+        hint="danishrecon setup rustscan",
     ))
 
     try:
@@ -286,7 +280,7 @@ def _check_external_tools():
         name="exploit-db index", category="External tool", severity=OPTIONAL,
         ok=bool(ss), path=ss, version=None,
         purpose="Exploit-DB reference lookup for detected versions (files_exploits.csv)",
-        hint="git clone https://gitlab.com/exploit-database/exploitdb exploit-database"
+        hint="danishrecon setup exploitdb"
              "   (or set EXPLOITDB_PATH to an existing checkout)",
     ))
 

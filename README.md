@@ -40,6 +40,20 @@ pip installs the Python code only. The scanners it drives are separate programs:
 | rustscan (optional) | fast all-ports discovery on the `Full` profile | `cargo install rustscan` |
 | Nikto, an exploit-database checkout, OpenVAS (optional) | extra checks, exploit references | see `docs/FEATURES.md` |
 
+The quickest way to get the optional ones is to let DanishRecon fetch them from their
+official releases into a per-user folder (`~/.danishrecon/tools`), which every scan searches
+no matter which directory you start it from:
+
+```bash
+danishrecon setup              # nuclei, katana, httpx, subfinder, nikto, exploit-db index, rustscan
+danishrecon setup nikto        # just one
+danishrecon setup --list       # what is installed and where
+danishrecon setup openvas      # OpenVAS container (needs Docker Desktop running; first start ~30 min)
+```
+
+Nikto also needs Perl (Windows: [Strawberry Perl](https://strawberryperl.com)). OpenVAS also
+needs `pip install "danishrecon[openvas]"`.
+
 Run `danishrecon-preflight` to see what is installed. A missing optional tool is reported
 in the scan log as "not tested"; it never produces simulated results.
 
