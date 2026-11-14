@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DanishRecon</title>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --line:#e3e6eb; --text:#16202b; --muted:#637083; --accent:#0b6bcb;
+  --crit:#b3261e; --high:#c2570c; --med:#8a6d00; --low:#2f6f4f; --info:#5b6676; --ok:#1d7a46;
+  --chip:#eef1f5; --mono:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0f141a; --panel:#171e26; --line:#273140; --text:#e6ebf1; --muted:#93a1b3; --accent:#5aa9f5;
+         --crit:#ff8a80; --high:#ffb074; --med:#e6c85a; --low:#7fd0a3; --info:#9aa7b8; --ok:#6fd49a; --chip:#222c38; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;align-items:center;gap:16px;padding:12px 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+header h1{font-size:16px;margin:0;letter-spacing:.2px}
+header .tools{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--chip);color:var(--muted);font-size:12px;white-space:nowrap}
+.chip.on{color:var(--ok)} .chip.off{color:var(--crit)}
+main{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;padding:16px 20px;align-items:start}
+@media (max-width:900px){main{grid-template-columns:1fr;padding:12px 16px}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:0 0 10px}
+label{display:block;font-size:12px;color:var(--muted);margin:8px 0 3px}
+input[type=text],input[type=password],select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--text);font:inherit}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.check{display:flex;gap:7px;align-items:flex-start;margin:7px 0;font-size:13px}
+.check input{margin-top:3px}
+button{font:inherit;padding:7px 12px;border-radius:7px;border:1px solid var(--line);background:var(--chip);color:var(--text);cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button:disabled{opacity:.5;cursor:not-allowed}
+details summary{cursor:pointer;color:var(--muted);font-size:12px;margin-top:8px}
+.msg{font-size:12px;margin-top:8px;min-height:16px} .msg.err{color:var(--crit)}
+.scanlist{list-style:none;margin:0;padding:0;max-height:420px;overflow:auto}
+.scanlist li{padding:8px;border-radius:7px;cursor:pointer;border:1px solid transparent}
+.scanlist li:hover{background:var(--chip)} .scanlist li.sel{border-color:var(--accent)}
+.scanlist .t{font-weight:600;word-break:break-all} .scanlist .m{font-size:12px;color:var(--muted)}
+.counts{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.count{flex:1 1 90px;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.count b{display:block;font-size:22px;line-height:1.1} .count span{font-size:11px;color:var(--muted);letter-spacing:.6px}
+.sev{font-weight:700;font-size:11px;letter-spacing:.4px}
+.CRITICAL{color:var(--crit)} .HIGH{color:var(--high)} .MEDIUM{color:var(--med)} .LOW{color:var(--low)} .INFO{color:var(--info)}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.f{cursor:pointer} tr.f:hover{background:var(--chip)}
+tr.dim td{opacity:.5}
+.where{font-family:var(--mono);font-size:12px;word-break:break-all;color:var(--muted)}
+.detail td{background:var(--bg);font-size:13px}
+.detail dl{display:grid;grid-template-columns:110px minmax(0,1fr);gap:4px 12px;margin:0}
+.detail dt{color:var(--muted)} .detail dd{margin:0;word-break:break-word}
+.detail code{font-family:var(--mono);font-size:12px}
+.tag{font-size:11px;padding:1px 6px;border-radius:5px;background:var(--chip);color:var(--muted);margin-left:6px;white-space:nowrap}
+.tag.new{color:var(--crit)} .tag.kev{color:var(--crit);font-weight:700}
+.log{font-family:var(--mono);font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;max-height:260px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+.log .warn{color:var(--high)} .log .error{color:var(--crit)} .log .good{color:var(--ok)} .log .stage{color:var(--accent);font-weight:600}
+.empty{color:var(--muted);padding:24px 8px;text-align:center}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px} .filters select{width:auto}
+h3{margin:0;font-size:18px;word-break:break-all}
+.sub{color:var(--muted);font-size:12px}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<header>
+  <h1>DanishRecon</h1>
+  <span class="chip" id="runstate">idle</span>
+  <div class="tools" id="tools"></div>
+</header>
+<main>
+  <div>
+    <div class="panel">
+      <h2>New scan</h2>
+      <label for="target">Target (hostname, IP or URL)</label>
+      <input type="text" id="target" placeholder="staging.example.com" autocomplete="off">
+      <label for="profile">Profile</label>
+      <select id="profile"></select>
+      <div class="check"><input type="checkbox" id="dast" checked><span>Test crawled parameters and forms for injection (nuclei DAST)</span></div>
+      <div class="check"><input type="checkbox" id="nvd" checked><span>Look up CVEs for detected versions (NVD, sends product+version only)</span></div>
+      <div class="check"><input type="checkbox" id="nuclei"><span>Also run the full nuclei template set (slower)</span></div>
+      <details>
+        <summary>Authenticated scan (optional)</summary>
+        <label for="cookie">Session cookie</label>
+        <input type="text" id="cookie" placeholder="session=abc123" autocomplete="off">
+        <label for="bearer">Bearer token</label>
+        <input type="password" id="bearer" autocomplete="off">
+        <label for="login_url">or form login URL</label>
+        <input type="text" id="login_url" placeholder="https://target/login" autocomplete="off">
+        <label for="login_data">Login form data</label>
+        <input type="password" id="login_data" placeholder="user=me&password=secret" autocomplete="off">
+      </details>
+      <div class="check" style="margin-top:12px"><input type="checkbox" id="authorized"><span><b>I own this target or have explicit written permission to test it.</b></span></div>
+      <div class="row"><button class="primary" id="start">Start scan</button><button id="stop" disabled>Stop</button></div>
+      <div class="msg" id="formmsg"></div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h2>Scans</h2>
+      <ul class="scanlist" id="scanlist"></ul>
+    </div>
+  </div>
+  <div class="panel" id="detail"><div class="empty">Select a scan, or start a new one.</div></div>
+</main>
+<script>
+"use strict";
+const TOKEN = "__SCAN_TOKEN__";
+const $ = id => document.getElementById(id);
+let selected = null, logNext = 0, pollTimer = null, lastDetail = null, openRows = new Set();
+
+function el(tag, attrs, ...kids){
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})){
+    if (k === "class") n.className = v; else if (k === "text") n.textContent = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v);
+  }
+  for (const kid of kids) if (kid != null) n.append(kid);   // strings become text nodes: never HTML
+  return n;
+}
+async function api(path, opts){
+  const r = await fetch(path, Object.assign({headers: {"X-Scan-Token": TOKEN, "Content-Type": "application/json"}}, opts || {}));
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body.detail || ("HTTP " + r.status));
+  return body;
+}
+const fmtTime = s => s ? s.replace("T", " ").slice(0, 16) : "";
+
+async function loadStatus(){
+  const s = await api("/api/status");
+  const tools = $("tools"); tools.replaceChildren();
+  for (const [name, ok] of Object.entries(s.tools)) tools.append(el("span", {class: "chip " + (ok ? "on" : "off"), text: name + (ok ? " ✓" : " missing")}));
+  const sel = $("profile");
+  if (!sel.options.length) for (const p of s.profiles) sel.append(el("option", {value: p, text: p}));
+  $("runstate").textContent = s.running ? ("scan #" + s.active_scan + " — " + (s.stage || "running")) : "idle";
+  $("start").disabled = s.running; $("stop").disabled = !s.running;
+  return s;
+}
+async function loadScans(){
+  const d = await api("/api/scans");
+  const ul = $("scanlist"); ul.replaceChildren();
+  if (!d.scans.length) ul.append(el("li", {class: "m", text: "No scans yet."}));
+  for (const s of d.scans){
+    const meta = "#" + s.id + " · " + s.profile + " · " + s.status + " · " + fmtTime(s.started) +
+                 (s.findings ? " · " + s.findings + " finding(s)" : "") + (s.confirmed_high ? " · " + s.confirmed_high + " confirmed high+" : "");
+    ul.append(el("li", {class: s.id === selected ? "sel" : "", onclick: () => select(s.id)},
+      el("div", {class: "t", text: s.target}), el("div", {class: "m", text: meta})));
+  }
+}
+function select(id){ selected = id; logNext = 0; openRows = new Set(); loadScans(); loadDetail(true); }
+
+function findingRow(f, target, isNew){
+  const where = f.url || ((f.host || "") + (f.port ? ":" + f.port : ""));
+  const title = el("div", {}, f.title || "");
+  if (f.parameter) title.append(el("span", {class: "tag", text: "param: " + f.parameter}));
+  if (isNew) title.append(el("span", {class: "tag new", text: "new"}));
+  if (f.kev) title.append(el("span", {class: "tag kev", text: "known exploited"}));
+  if (f.epss >= 0.1) title.append(el("span", {class: "tag", text: "EPSS " + Math.round(f.epss * 100) + "%"}));
+  title.append(el("div", {class: "where", text: where}));
+  const tri = el("select", {onclick: e => e.stopPropagation(), onchange: async e => {
+      await api("/api/triage", {method: "POST", body: JSON.stringify({target, fingerprint: f.fingerprint, status: e.target.value, note: ""})});
+      loadDetail(false);
+    }});
+  for (const s of ["open", "fixed", "accepted", "false_positive"]) tri.append(el("option", {value: s, text: s.replace("_", " ")}));
+  tri.value = f.triage || "open";
+  const tr = el("tr", {class: "f" + (["false_positive", "fixed"].includes(f.triage) ? " dim" : ""), onclick: () => {
+      openRows.has(f.fingerprint) ? openRows.delete(f.fingerprint) : openRows.add(f.fingerprint); render(lastDetail);
+    }},
+    el("td", {}, el("span", {class: "sev " + f.severity, text: f.severity})),
+    el("td", {}, title),
+    el("td", {}, el("span", {class: "chip", text: (f.source || "") + " / " + (f.confidence || "")})),
+    el("td", {}, tri));
+  if (!openRows.has(f.fingerprint)) return [tr];
+  const dl = el("dl", {});
+  const add = (k, v, code) => { if (v) dl.append(el("dt", {text: k}), el("dd", {}, code ? el("code", {text: v}) : v)); };
+  add("Description", f.description); add("Evidence", f.evidence, true); add("Remediation", f.remediation);
+  add("CVE", f.cve); add("CVSS", f.cvss ? String(f.cvss) : ""); add("Category", f.category);
+  for (const r of (f.references || [])) if (/^https?:\/\//.test(r)) dl.append(el("dt", {text: "Reference"}), el("dd", {}, el("a", {href: r, target: "_blank", rel: "noopener noreferrer", text: r})));
+  add("Fingerprint", f.fingerprint, true);
+  return [tr, el("tr", {class: "detail"}, el("td", {colspan: "4"}, dl))];
+}
+
+function render(d){
+  if (!d) return;
+  const box = $("detail"); const s = d.scan; const keep = box.querySelector(".log"); const scroll = keep ? keep.scrollTop : null;
+  const fsev = (box.querySelector("#fsev") || {}).value || "", fconf = (box.querySelector("#fconf") || {}).value || "", ftri = (box.querySelector("#ftri") || {}).value || "active";
+  box.replaceChildren();
+  box.append(el("h3", {text: s.target}),
+    el("div", {class: "sub", text: "Scan #" + s.id + " · " + s.profile + " · " + s.status + (d.running ? " (" + (d.stage || "running") + ")" : "") + " · started " + fmtTime(s.started) + (s.summary && s.summary.duration ? " · " + s.summary.duration : "")}));
+  const counts = el("div", {class: "counts"});
+  for (const k of ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]) counts.append(el("div", {class: "count"}, el("b", {class: k, text: String(d.counts[k] || 0)}), el("span", {text: k})));
+  box.append(counts);
+  if (d.diff){
+    const txt = "Compared with scan #" + d.diff.previous_scan + ": " + d.diff.new.length + " new, " + d.diff.fixed.length + " no longer present, " + d.diff.persisting + " still present.";
+    const p = el("div", {class: "sub", text: txt}); box.append(p);
+    for (const f of d.diff.fixed.slice(0, 8)) box.append(el("div", {class: "sub", text: "  gone: [" + f.severity + "] " + f.title + " — " + f.where}));
+  }
+  if (d.has_report){
+    box.append(el("div", {class: "row", style: "margin:8px 0"}, el("button", {onclick: async () => {
+      const r = await fetch("/api/scans/" + s.id + "/report", {headers: {"X-Scan-Token": TOKEN}});
+      const w = window.open(URL.createObjectURL(new Blob([await r.text()], {type: "text/html"})), "_blank", "noopener");
+    }, text: "Open full HTML report"})));
+  }
+  if (d.running || (window._log && window._logScan === s.id && window._log.length)){
+    const log = el("div", {class: "log"});
+    for (const l of (window._logScan === s.id ? window._log : [])) log.append(el("div", {class: l.level, text: "[" + String(l.t).padStart(6) + "s] " + l.msg}));
+    box.append(el("h2", {style: "margin-top:12px", text: "Live log"}), log);
+    log.scrollTop = scroll === null || d.running ? log.scrollHeight : scroll;
+  }
+  const mk = (id, opts, val) => { const x = el("select", {id, onchange: () => render(lastDetail)}); for (const [v, t] of opts) x.append(el("option", {value: v, text: t})); x.value = val; return x; };
+  box.append(el("h2", {style: "margin-top:14px", text: "Findings"}), el("div", {class: "filters"},
+    mk("fsev", [["", "all severities"], ["CRITICAL", "critical"], ["HIGH", "high"], ["MEDIUM", "medium"], ["LOW", "low"], ["INFO", "info"]], fsev),
+    mk("fconf", [["", "any confidence"], ["confirmed", "confirmed"], ["version-match", "version-match"], ["exposure", "exposure"], ["heuristic", "heuristic"]], fconf),
+    mk("ftri", [["active", "open + accepted"], ["", "all"], ["open", "open"], ["false_positive", "false positive"], ["fixed", "fixed"]], ftri)));
+  const newSet = new Set(d.diff ? d.diff.new : []);
+  const rows = d.findings.filter(f => (!fsev || f.severity === fsev) && (!fconf || f.confidence === fconf) &&
+    (!ftri || (ftri === "active" ? !["false_positive", "fixed"].includes(f.triage) : f.triage === ftri)));
+  if (!rows.length){ box.append(el("div", {class: "empty", text: d.running ? "Scanning… findings appear here as they are confirmed." : (d.findings.length ? "No findings match the filters." : "No structured findings in this scan.")})); return; }
+  const tb = el("tbody", {});
+  for (const f of rows) for (const r of findingRow(f, s.target, newSet.has(f.fingerprint))) tb.append(r);
+  box.append(el("div", {class: "tablewrap"}, el("table", {}, el("thead", {}, el("tr", {}, el("th", {text: "Severity"}), el("th", {text: "Finding"}), el("th", {text: "Source / confidence"}), el("th", {text: "Triage"}))), tb)));
+}
+
+async function loadDetail(reset){
+  if (selected == null) return;
+  try {
+    const d = await api("/api/scans/" + selected);
+    if (reset || window._logScan !== selected){ window._log = []; window._logScan = selected; logNext = 0; }
+    const lg = await api("/api/scans/" + selected + "/log?after=" + logNext);
+    window._log.push(...lg.lines); logNext = lg.next;
+    lastDetail = d; render(d);
+  } catch (e) { $("detail").replaceChildren(el("div", {class: "empty", text: "Could not load scan: " + e.message})); }
+}
+async function tick(){
+  try { const s = await loadStatus(); await loadScans(); if (selected != null && (s.running || (lastDetail && lastDetail.running))) await loadDetail(false); }
+  catch (e) { $("runstate").textContent = "server unreachable"; }
+}
+$("start").addEventListener("click", async () => {
+  const msg = $("formmsg"); msg.className = "msg"; msg.textContent = "";
+  try {
+    const body = {target: $("target").value, profile: $("profile").value, authorized: $("authorized").checked,
+      nuclei: $("nuclei").checked, nvd: $("nvd").checked, dast: $("dast").checked,
+      cookie: $("cookie").value, bearer: $("bearer").value, login_url: $("login_url").value, login_data: $("login_data").value};
+    const r = await api("/api/scans", {method: "POST", body: JSON.stringify(body)});
+    msg.textContent = "Scan #" + r.scan_id + " started on " + r.target; $("authorized").checked = false;
+    select(r.scan_id); tick();
+  } catch (e) { msg.className = "msg err"; msg.textContent = e.message; }
+});
+$("stop").addEventListener("click", async () => {
+  try { const s = await api("/api/status"); if (s.active_scan != null) await api("/api/scans/" + s.active_scan + "/stop", {method: "POST"}); } catch (e) {}
+  tick();
+});
+tick(); pollTimer = setInterval(tick, 2500);
+</script>
+</body>
+</html>

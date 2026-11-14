@@ -1,0 +1,13 @@
+{
+  "name": "ground-truth-app",
+  "description": "Local deliberately vulnerable app (benchmark/ground_truth_app.py) with a known set of issues.",
+  "login": {"path": "/login", "data": "user=test&password=test"},
+  "expected": [
+    {"id": "sqli-product",  "category": "sqli",   "path": "/product",  "parameter": "id",  "note": "GET, unauthenticated"},
+    {"id": "xss-search",    "category": "xss",    "path": "/search",   "parameter": "q",   "note": "GET, unauthenticated"},
+    {"id": "sqli-account",  "category": "sqli",   "path": "/account",  "parameter": "id",  "note": "GET, needs session cookie"},
+    {"id": "xss-feedback",  "category": "xss",    "path": "/feedback", "parameter": "msg", "note": "POST body"},
+    {"id": "secret-env",    "category": "secret", "path": "/.env",     "parameter": "",    "note": "exposed AWS key"}
+  ],
+  "safe_paths": ["/get", "/anything", "/subscribe", "/login", "/"]
+}

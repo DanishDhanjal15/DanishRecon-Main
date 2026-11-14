@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  greenbone:
+    image: securecompliance/gvm:latest
+    container_name: greenbone
+    environment:
+      - PASSWORD=admin
+    ports:
+      - "9390:9390"
+      - "9392:9392"
+    volumes:
+      - gvm-data:/data
+    restart: unless-stopped
+
+volumes:
+  gvm-data:

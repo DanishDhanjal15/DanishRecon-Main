@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Scan output - user-specific, may describe scanned targets
+results/
+**/results/
+*.db
+*.db-journal
+*.pcap
+*.pcapng
+nvd_cache/
+app_pin.json
+.gemini_cache/
+.gemini_quota
+*.log
+benchmark/out/
+
+# Third-party tools: install them, never commit them
+nikto/
+nikto_official/
+exploit-database/
+openvas-scanner/
+dirbuster_pkg/
+nuclei-templates/
+
+# Editors / OS
+.vscode/
+.idea/
+.claude/
+.DS_Store
+Thumbs.db

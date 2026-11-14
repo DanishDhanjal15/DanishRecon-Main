@@ -1,0 +1,28 @@
+# Deliberately vulnerable practice applications for benchmarking the scanner.
+# They are published on 127.0.0.1 ONLY - never expose them to a network.
+#
+#   docker compose -f benchmark/docker-compose.yml up -d
+#   python CyberRecon-Pro/cli.py http://127.0.0.1:3000 --i-am-authorized --profile Quick --no-nvd
+#   docker compose -f benchmark/docker-compose.yml down
+services:
+  juice-shop:
+    image: bkimminich/juice-shop:latest
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  dvwa:
+    image: ghcr.io/digininja/dvwa:latest
+    environment:
+      - DB_SERVER=dvwa-db
+    depends_on:
+      - dvwa-db
+    ports:
+      - "127.0.0.1:4280:80"
+
+  dvwa-db:
+    image: mariadb:10
+    environment:
+      - MYSQL_ROOT_PASSWORD=dvwa
+      - MYSQL_DATABASE=dvwa
+      - MYSQL_USER=dvwa
+      - MYSQL_PASSWORD=p@ssw0rd
