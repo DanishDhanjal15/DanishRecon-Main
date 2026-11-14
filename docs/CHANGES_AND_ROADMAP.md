@@ -1,5 +1,11 @@
 # DanishRecon - Changes Log & Roadmap
 
+## v0.7.2
+
+- Preflight finds `.env` the same way the scanner does (the working directory or any parent
+  folder) and reads the Gemini key from the loaded environment, so the GUI no longer reports
+  ".env file / GEMINI_API_KEY not set" when they are set.
+
 ## v0.7.1
 
 - **`danishrecon setup`**: installs Nikto, the Exploit-DB index, nuclei / katana / httpx /

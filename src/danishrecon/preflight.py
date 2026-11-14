@@ -322,11 +322,18 @@ def _check_python_packages():
 
 def _check_config():
     checks = []
-    env_path = _first_existing([
-        os.path.join(_PARENT, ".env"),
-        os.path.join(_HERE, ".env"),
-    ])
-    has_key = False
+    # Same lookup the scanner uses: a .env in the working directory or any parent folder.
+    candidates = []
+    d = os.getcwd()
+    while True:
+        candidates.append(os.path.join(d, ".env"))
+        parent = os.path.dirname(d)
+        if parent == d:
+            break
+        d = parent
+    env_path = _first_existing(candidates)
+    has_key = bool(os.environ.get("GEMINI_API_KEY", "").strip()) and \
+        "your_api_key_here" not in os.environ.get("GEMINI_API_KEY", "")
     if env_path:
         try:
             with open(env_path, "r", encoding="utf-8", errors="ignore") as f:
