@@ -173,3 +173,26 @@ class SetupCommand(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class GuiWithoutConsole(unittest.TestCase):
+    """`danishrecon-gui` runs under pythonw, where sys.stdout/sys.stderr are None."""
+
+    def test_gui_imports_and_builds_without_console_streams(self):
+        try:
+            import PyQt5  # noqa: F401
+        except Exception:
+            self.skipTest("PyQt5 not installed")
+        import subprocess
+        code = (
+            "import os, sys, tempfile; os.chdir(tempfile.mkdtemp());"
+            "os.environ['QT_QPA_PLATFORM']='offscreen'; os.environ['DISABLE_GEMINI']='true';"
+            "os.environ['HOME']=os.environ['USERPROFILE']=tempfile.mkdtemp();"
+            "sys.stdout=None; sys.stderr=None;"
+            "from PyQt5.QtWidgets import QApplication; app=QApplication([]);"
+            "from danishrecon import gui; w=gui.DanishReconMain();"
+            "print('printing is safe');"
+            "open(os.path.join(os.path.expanduser('~'),'ok.txt'),'w').write(gui.GUI_LOG)"
+        )
+        r = subprocess.run([sys.executable, "-W", "ignore", "-c", code], capture_output=True, text=True, timeout=180)
+        self.assertEqual(r.returncode, 0, r.stderr[-800:])

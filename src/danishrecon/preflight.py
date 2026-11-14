@@ -405,7 +405,8 @@ def run_preflight():
 # Terminal rendering
 # ─────────────────────────────────────────────────────────────────────────────
 def _supports_color():
-    return sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
+    isatty = getattr(sys.stdout, "isatty", None)
+    return bool(isatty and isatty()) and os.environ.get("NO_COLOR") is None
 
 
 def _c(code, text):

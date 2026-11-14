@@ -57,17 +57,47 @@ from PyQt5.QtGui import (
 # 
 #  FIX UNICODE ENCODING FOR WINDOWS CONSOLE
 # 
-if sys.platform == 'win32':
+def _setup_output_streams():
+    """Make print()/tracebacks safe in every launch mode.
+
+    `danishrecon-gui` (and double-clicking) starts Python in window mode (pythonw), where
+    there is no console: sys.stdout / sys.stderr are None and any write would crash the
+    app before the window appears. In that case send all output to a log file instead.
+    In a console, just switch the streams to UTF-8 so emoji in log lines don't crash.
+    """
     import io
-    # Reconfigure stdout/stderr to use UTF-8 encoding
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
-    # Set console code page to UTF-8 if possible
-    try:
-        import ctypes
-        ctypes.windll.kernel32.SetConsoleOutputCP(65001)  # UTF-8
-    except:
-        pass
+    if sys.stdout is None or sys.stderr is None:
+        try:
+            log_dir = os.path.join(os.path.expanduser("~"), ".danishrecon")
+            os.makedirs(log_dir, exist_ok=True)
+            log = open(os.path.join(log_dir, "gui.log"), "a", encoding="utf-8",
+                       errors="replace", buffering=1)
+            log.write(f"\n===== DanishRecon GUI started {datetime.now():%Y-%m-%d %H:%M:%S} =====\n")
+        except Exception:
+            log = open(os.devnull, "w", encoding="utf-8")
+        if sys.stdout is None:
+            sys.stdout = log
+        if sys.stderr is None:
+            sys.stderr = log
+        return
+    if sys.platform == "win32":
+        for name in ("stdout", "stderr"):
+            stream = getattr(sys, name)
+            try:
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                buf = getattr(stream, "buffer", None)
+                if buf is not None:
+                    setattr(sys, name, io.TextIOWrapper(buf, encoding="utf-8", errors="replace"))
+        try:
+            import ctypes
+            ctypes.windll.kernel32.SetConsoleOutputCP(65001)  # UTF-8
+        except Exception:
+            pass
+
+
+_setup_output_streams()
+GUI_LOG = os.path.join(os.path.expanduser("~"), ".danishrecon", "gui.log")
 
 # 
 #  THEME ENGINE
@@ -3108,9 +3138,44 @@ class DanishReconMain(QMainWindow):
 # 
 #  ENTRY POINT
 # 
+def _report_fatal(app, exc_text):
+    """Never fail silently: log the error and show it in a message box."""
+    try:
+        print(exc_text, file=sys.stderr)
+    except Exception:
+        pass
+    try:
+        QMessageBox.critical(
+            None, "DanishRecon could not start",
+            "DanishRecon hit an error while starting:\n\n" + exc_text[-1500:] +
+            f"\n\nFull log: {GUI_LOG}\n"
+            "Run  danishrecon-preflight  to check your setup, or open an issue on GitHub.")
+    except Exception:
+        pass
+
+
 def main():
+    app = QApplication.instance() or QApplication(sys.argv)
+
+    # Errors inside Qt callbacks would otherwise vanish in window mode.
+    def _excepthook(exc_type, exc, tb):
+        import traceback as _tb
+        text = "".join(_tb.format_exception(exc_type, exc, tb))
+        print(text, file=sys.stderr)
+    sys.excepthook = _excepthook
+
+    try:
+        return _main(app)
+    except SystemExit:
+        raise
+    except BaseException:
+        import traceback as _tb
+        _report_fatal(app, _tb.format_exc())
+        return 1
+
+
+def _main(app):
     os.makedirs(RESULTS_DIR, exist_ok=True)
-    app = QApplication(sys.argv)
     app.setApplicationName("DanishRecon")
     app.setApplicationVersion("")
     app.setStyle("Fusion")
