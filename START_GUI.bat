@@ -12,12 +12,12 @@ for /d %%D in ("%USERPROFILE%\Downloads\strawberry-perl*") do set "PATH=%PATH%;%
 
 where danishrecon-gui >nul 2>&1
 if not errorlevel 1 (
-    danishrecon-gui
+    start "" danishrecon-gui
     goto :end
 )
 python -c "import danishrecon.gui" >nul 2>&1
 if not errorlevel 1 (
-    python -m danishrecon.gui
+    start "" pythonw -m danishrecon.gui
     goto :end
 )
 echo DanishRecon is not installed. Install it with:

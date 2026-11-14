@@ -196,3 +196,27 @@ class GuiWithoutConsole(unittest.TestCase):
         )
         r = subprocess.run([sys.executable, "-W", "ignore", "-c", code], capture_output=True, text=True, timeout=180)
         self.assertEqual(r.returncode, 0, r.stderr[-800:])
+
+
+class GuiHidesToolConsoles(unittest.TestCase):
+    """Tools started by the GUI (nmap, nuclei, ...) must not pop up console windows."""
+
+    @unittest.skipUnless(sys.platform == "win32", "Windows-only behaviour")
+    def test_child_processes_get_create_no_window(self):
+        try:
+            import PyQt5  # noqa: F401
+        except Exception:
+            self.skipTest("PyQt5 not installed")
+        import subprocess
+        code = (
+            "import os, sys, tempfile; os.chdir(tempfile.mkdtemp());"
+            "os.environ['QT_QPA_PLATFORM']='offscreen'; os.environ['DISABLE_GEMINI']='true';"
+            "import subprocess as sp; got={}; real=sp.Popen.__init__\n"
+            "def spy(self, *a, **k):\n    got.update(k); return real(self, *a, **k)\n"
+            "sp.Popen.__init__=spy\n"
+            "from danishrecon import gui\n"
+            "sp.run([sys.executable, '-c', 'pass'], capture_output=True)\n"
+            "assert got.get('creationflags') == 0x08000000, got\n"
+        )
+        r = subprocess.run([sys.executable, "-W", "ignore", "-c", code], capture_output=True, text=True, timeout=180)
+        self.assertEqual(r.returncode, 0, r.stderr[-800:])

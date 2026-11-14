@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "danishrecon"
-version = "0.7.3"
+version = "0.7.4"
 description = "Security toolkit: recon + web vulnerability scanning, static malware analysis and network-traffic analysis. For authorized testing only."
 readme = "README.md"
 requires-python = ">=3.10"

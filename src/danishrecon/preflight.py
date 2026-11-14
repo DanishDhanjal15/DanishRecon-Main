@@ -424,7 +424,7 @@ def _sev_label(sev):
 
 
 def print_report(report):
-    if IS_WINDOWS:
+    if IS_WINDOWS and _supports_color():
         os.system("")  # enable ANSI escape processing on legacy Windows consoles
     try:
         # Prefer UTF-8 so any tool version strings print cleanly; harmless if unsupported

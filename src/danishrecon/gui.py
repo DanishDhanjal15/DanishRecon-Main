@@ -97,7 +97,31 @@ def _setup_output_streams():
 
 
 _setup_output_streams()
-GUI_LOG = os.path.join(os.path.expanduser("~"), ".danishrecon", "gui.log")
+
+
+def _hide_child_consoles():
+    """Run every external tool (nmap, nuclei, httpx, tshark, ...) without a console window.
+
+    The GUI runs without a console, so on Windows each console program it starts would
+    otherwise pop up its own black window. All tool output is captured through pipes,
+    so the window is never needed. A caller that sets creationflags itself is left alone.
+    """
+    if sys.platform != "win32" or getattr(subprocess.Popen, "_danishrecon_hidden", False):
+        return
+    no_window = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+    original_init = subprocess.Popen.__init__
+
+    def __init__(self, *args, **kwargs):
+        if not kwargs.get("creationflags"):
+            kwargs["creationflags"] = no_window
+        return original_init(self, *args, **kwargs)
+
+    subprocess.Popen.__init__ = __init__
+    subprocess.Popen._danishrecon_hidden = True
+
+
+_hide_child_consoles()
+GUI_LOG =os.path.join(os.path.expanduser("~"), ".danishrecon", "gui.log")
 
 # 
 #  THEME ENGINE
