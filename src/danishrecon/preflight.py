@@ -462,6 +462,9 @@ def print_report(report):
     print(f"  {s['ok']}/{s['total']} checks passed"
           f"  |  critical missing: {s['missing_critical']}"
           f"  |  recommended missing: {s['missing_recommended']}")
+    if s["missing_critical"] or s["missing_recommended"]:
+        print("  Scanning tools in one step:  danishrecon setup")
+        print("  Full setup guide:            https://github.com/DanishDhanjal15/DanishRecon-Main/blob/main/docs/SETUP.md")
     print()
 
 

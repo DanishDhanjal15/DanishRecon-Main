@@ -298,6 +298,8 @@ def cmd_setup(argv=None):
     show()
     if failed:
         print("Not installed: " + ", ".join(failed))
+        print("Help for each tool: https://github.com/DanishDhanjal15/DanishRecon-Main/blob/main/docs/SETUP.md")
+    print("Next: run  danishrecon-preflight  to check Perl, Wireshark and the rest.")
     return 1 if failed else 0
 
 

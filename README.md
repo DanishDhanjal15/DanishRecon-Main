@@ -22,40 +22,54 @@ model, and reports only what was actually observed.
 
 ## Install
 
+**New machine? Follow [docs/SETUP.md](docs/SETUP.md)** - step-by-step for Windows, Linux
+and macOS, plus a pre-scan checklist and fixes for every "not installed" message.
+
+The short version:
+
+```bash
+# 1. Python 3.10+, then DanishRecon in a virtual environment
+python -m venv danishrecon-venv
+danishrecon-venv\Scripts\activate            # Linux/macOS: source danishrecon-venv/bin/activate
+pip install "danishrecon[all]"
+
+# 2. nmap (required) - https://nmap.org/download  (Windows: keep "Npcap" ticked)
+
+# 3. the scanning tools, from their official releases, into ~/.danishrecon/tools
+danishrecon setup
+
+# 4. Perl for Nikto (Windows: Strawberry Perl), Wireshark for traffic analysis,
+#    Docker Desktop only if you want OpenVAS - see docs/SETUP.md
+
+# 5. check
+danishrecon-preflight
+```
+
+pip installs the Python code only; the extras pick which parts you get:
+
 ```bash
 pip install danishrecon                 # scan engine + CLI
 pip install "danishrecon[gui]"          # + desktop GUI (PyQt5)
 pip install "danishrecon[web]"          # + web dashboard
 pip install "danishrecon[malware]"      # + YARA, PE and Office-macro analysis
-pip install "danishrecon[all]"          # everything above
+pip install "danishrecon[openvas]"      # + OpenVAS client (also needs Docker)
+pip install "danishrecon[all]"          # gui + web + malware + ai
 ```
 
-pip installs the Python code only. The scanners it drives are separate programs:
+The external programs it drives:
 
-| Tool | Needed for | Install |
+| Tool | Needed for | How to get it |
 |---|---|---|
 | **nmap** (required) | ports, services, TLS cipher audit | https://nmap.org/download |
-| nuclei, katana, httpx, subfinder (recommended) | crawl, injection tests, exposure templates | `go install github.com/projectdiscovery/<tool>/...@latest` |
-| tshark / Wireshark | traffic analysis | https://www.wireshark.org/download.html |
-| rustscan (optional) | fast all-ports discovery on the `Full` profile | `cargo install rustscan` |
-| Nikto, an exploit-database checkout, OpenVAS (optional) | extra checks, exploit references | see `docs/FEATURES.md` |
+| nuclei, katana, httpx, subfinder | crawl, injection tests, exposure templates | `danishrecon setup` |
+| Nikto + Perl | extra web-server checks | `danishrecon setup nikto` + Perl |
+| Exploit-DB index | exploit references for detected versions | `danishrecon setup exploitdb` |
+| rustscan (optional) | fast all-ports discovery (`Full` profile) | `danishrecon setup rustscan` |
+| tshark / Wireshark | `danishrecon sniff` | https://www.wireshark.org/download.html |
+| OpenVAS (optional) | network vulnerability scan | Docker Desktop + `danishrecon setup openvas` |
 
-The quickest way to get the optional ones is to let DanishRecon fetch them from their
-official releases into a per-user folder (`~/.danishrecon/tools`), which every scan searches
-no matter which directory you start it from:
-
-```bash
-danishrecon setup              # nuclei, katana, httpx, subfinder, nikto, exploit-db index, rustscan
-danishrecon setup nikto        # just one
-danishrecon setup --list       # what is installed and where
-danishrecon setup openvas      # OpenVAS container (needs Docker Desktop running; first start ~30 min)
-```
-
-Nikto also needs Perl (Windows: [Strawberry Perl](https://strawberryperl.com)). OpenVAS also
-needs `pip install "danishrecon[openvas]"`.
-
-Run `danishrecon-preflight` to see what is installed. A missing optional tool is reported
-in the scan log as "not tested"; it never produces simulated results.
+A missing optional tool is reported in the scan log as "not tested" with the command that
+installs it; it never produces simulated results.
 
 ## Use
 
